@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+from PIL import Image, ImageTk
 import csv
 
 # Initialisation de la fenêtre principale
 root = tk.Tk()
 root.title("Application D'Évaluation des Images")
-root.geometry("800x600")
+root.geometry("900x650")
 root.configure(bg="#f4f4f4")
 
 # Styles globaux
@@ -19,13 +20,14 @@ style.configure("TCombobox", font=("Helvetica", 12))
 current_image_index = 0
 responses = []
 images = [
-    {"content": "test3.jpg", "style": "style.jpg", "generated": "generated1.jpg"},
-    {"content": "content2.jpg", "style": "style2.jpg", "generated": "generated2.jpg"},
-    {"content": "content3.jpg", "style": "style3.jpg", "generated": "generated3.jpg"},
+    {"content": "test3.jpg", "style": "style.png", "generated": "generated1.jpg"},
+    {"content": "t1.jpg", "style": "style.png", "generated": "generated2.jpg"},
+    {"content": "t2.jpg", "style": "style.png", "generated": "generated3.jpg"},
 ]
 
 criteria = ["Fidélité au style", "Respect du contenu", "Esthétique générale", "Originalité"]
 ratings = {}
+image_widgets = {}
 
 # Fonction pour passer à l'image suivante
 def next_image():
@@ -37,12 +39,19 @@ def next_image():
             messagebox.showerror("Erreur", f"Veuillez évaluer le critère : {critere}")
             return
 
+    # Calculer la moyenne des évaluations pour l'image actuelle
+    total_score = 0
+    for critere in criteria:
+        total_score += int(ratings[critere].get())
+    average_score = total_score / len(criteria)
+
     # Sauvegarder les réponses
     response = {
         "Image": f"Image {current_image_index + 1}",
     }
     for critere in criteria:
         response[critere] = ratings[critere].get()
+    response["Moyenne"] = round(average_score, 2)  # Ajouter la moyenne à la réponse
     responses.append(response)
 
     # Réinitialiser les notes
@@ -65,18 +74,37 @@ def display_image():
     # Informations sur l'image actuelle
     image_data = images[current_image_index]
 
-    # Mettre à jour les labels
-    lbl_content_image.configure(text=f"Image de Contenu : {image_data['content']}")
-    lbl_style_image.configure(text=f"Image de Style : {image_data['style']}")
-    lbl_generated_image.configure(text=f"Image Générée : {image_data['generated']}")
+    try:
+        # Charger les images
+        content_image = Image.open(image_data['content']).resize((240, 150))
+        style_image = Image.open(image_data['style']).resize((240, 150))
+        generated_image = Image.open(image_data['generated']).resize((240, 150))
 
-    # Mettre à jour le numéro d'image
-    lbl_image_number.configure(text=f"Image {current_image_index + 1} sur {len(images)}")
+        # Convertir en images Tkinter
+        content_photo = ImageTk.PhotoImage(content_image)
+        style_photo = ImageTk.PhotoImage(style_image)
+        generated_photo = ImageTk.PhotoImage(generated_image)
+
+        # Mettre à jour les widgets
+        image_widgets['content'].configure(image=content_photo)
+        image_widgets['content'].image = content_photo  # Nécessaire pour éviter que l'image soit supprimée par le garbage collector
+
+        image_widgets['style'].configure(image=style_photo)
+        image_widgets['style'].image = style_photo
+
+        image_widgets['generated'].configure(image=generated_photo)
+        image_widgets['generated'].image = generated_photo
+
+        # Mettre à jour le numéro d'image
+        lbl_image_number.configure(text=f"Image {current_image_index + 1} sur {len(images)}")
+    except FileNotFoundError as e:
+        messagebox.showerror("Erreur", f"Fichier non trouvé : {e}")
 
 # Fonction pour sauvegarder les réponses dans un fichier CSV
 def save_responses():
     with open("evaluation_scores.csv", "w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=["Image"] + criteria)
+        fieldnames = ["Image"] + criteria + ["Moyenne"]
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(responses)
 
@@ -93,14 +121,18 @@ frame_images.pack(side=tk.TOP, fill=tk.X)
 lbl_image_number = ttk.Label(frame_images, text="Image 1 sur 3", font=("Helvetica", 14))
 lbl_image_number.pack()
 
-lbl_content_image = ttk.Label(frame_images, text="Image de Contenu : content1.jpg")
-lbl_content_image.pack()
+# Cadre pour afficher les images horizontalement
+frame_image_display = ttk.Frame(frame_images)
+frame_image_display.pack(side=tk.TOP, fill=tk.X)
 
-lbl_style_image = ttk.Label(frame_images, text="Image de Style : style1.jpg")
-lbl_style_image.pack()
+image_widgets['content'] = ttk.Label(frame_image_display, text="Image de Contenu", relief="solid", padding=10)
+image_widgets['content'].pack(side=tk.LEFT, padx=10)
 
-lbl_generated_image = ttk.Label(frame_images, text="Image Générée : generated1.jpg")
-lbl_generated_image.pack()
+image_widgets['style'] = ttk.Label(frame_image_display, text="Image de Style", relief="solid", padding=10)
+image_widgets['style'].pack(side=tk.LEFT, padx=10)
+
+image_widgets['generated'] = ttk.Label(frame_image_display, text="Image Générée", relief="solid", padding=10)
+image_widgets['generated'].pack(side=tk.LEFT, padx=10)
 
 frame_ratings = ttk.Frame(root, padding=20)
 frame_ratings.pack(side=tk.TOP, fill=tk.BOTH, expand=True)

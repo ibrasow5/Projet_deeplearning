@@ -28,8 +28,8 @@ def harmonize_colors(image_path, harmony_type="complementary"):
     return harmonized_image
 
 # Tester avec une image
-image_path = "test3.jpg"
-harmonized = harmonize_colors(image_path, harmony_type="complementary")
+image_path = "t1.jpg"
+harmonized = harmonize_colors(image_path, harmony_type="analogous")
 cv2.imwrite("harmonized_image.jpg", harmonized)
 
 def plot_histogram(image, title):

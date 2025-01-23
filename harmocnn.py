@@ -31,6 +31,16 @@ def load_image_pillow(image_path, target_size=(256, 256)):
         print(f"Erreur lors du chargement de l'image : {image_path}")
         print(f"Détails de l'erreur : {e}")
         return None
+    
+# Fonction pour enregistrer une image générée
+def save_image(image_tensor, save_path):
+    # Supprimer la dimension batch et normaliser entre 0 et 255
+    image = tf.squeeze(image_tensor, axis=0)
+    image = (image.numpy() * 255).astype(np.uint8)  # Convertir en entier 8 bits
+    
+    # Convertir en image Pillow
+    img = Image.fromarray(image)
+    img.save(save_path)
 
 # Fonction pour calculer la perte de contenu
 def compute_content_loss(base_content, target):
@@ -74,16 +84,16 @@ def style_transfer(content_image, style_image, content_weight=1e4, style_weight=
     style_features = get_features(style_image, vgg, style_layers)
     
     # Initialiser l'image générée
-    generated_image = tf.Variable(content_image, trainable=True, dtype=tf.float32)
+    generated = tf.Variable(content_image, trainable=True, dtype=tf.float32)
     
     # Optimiseur
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     
     # Entraînement
-    epochs = 30
+    epochs = 10
     for epoch in range(epochs):
         with tf.GradientTape() as tape:
-            generated_features = get_features(generated_image, vgg, content_layers + style_layers)
+            generated_features = get_features(generated, vgg, content_layers + style_layers)
             
             content_loss = compute_content_loss(generated_features[0], content_features[0])
             
@@ -95,28 +105,63 @@ def style_transfer(content_image, style_image, content_weight=1e4, style_weight=
             total_loss = content_weight * content_loss + style_weight * style_loss
         
         # Calculer les gradients
-        grads = tape.gradient(total_loss, generated_image)
-        optimizer.apply_gradients([(grads, generated_image)])
+        grads = tape.gradient(total_loss, generated)
+        optimizer.apply_gradients([(grads, generated)])
         
         # Afficher les pertes toutes les 10 itérations
         if epoch % 10 == 0:
             print(f"Epoch {epoch}, Total Loss: {total_loss.numpy()}, Content Loss: {content_loss.numpy()}, Style Loss: {style_loss.numpy()}")
     
-    return generated_image
+    return generated
 
 # Charger les images source et style
 content_image = load_image_pillow("test3.jpg", target_size=(256, 256))
+content_image1 = load_image_pillow("t1.jpg", target_size=(256, 256))
+content_image2 = load_image_pillow("t2.jpg", target_size=(256, 256))
 style_image = load_image_pillow("style.png", target_size=(256, 256))
 
 if content_image is None or style_image is None:
     print("Erreur : Impossible de charger l'une des images.")
 else:
+    # Appliquer le transfert de style
+    result_image = style_transfer(content_image, style_image)
+    
     # Afficher les images source et style
     show_image(content_image, title="Image de Contenu")
     show_image(style_image, title="Image de Style")
     
-    # Appliquer le transfert de style
-    result_image = style_transfer(content_image, style_image)
-    
     # Afficher l'image générée
     show_image(result_image, title="Image Générée")
+    
+    # Enregistrer l'image générée
+    save_image(result_image, "generated1.jpg")
+
+    # --------------------------------------------------------------------------------------------
+
+    # Appliquer le transfert de style
+    result_image1 = style_transfer(content_image1, style_image)
+    
+    # Afficher les images source et style
+    show_image(content_image1, title="Image de Contenu")
+    show_image(style_image, title="Image de Style")
+    
+    # Afficher l'image générée
+    show_image(result_image1, title="Image Générée")
+    
+    # Enregistrer l'image générée
+    save_image(result_image1, "generated2.jpg")
+
+    # --------------------------------------------------------------------------------------------
+
+    # Appliquer le transfert de style
+    result_image2 = style_transfer(content_image2, style_image)
+    
+    # Afficher les images source et style
+    show_image(content_image2, title="Image de Contenu")
+    show_image(style_image, title="Image de Style")
+    
+    # Afficher l'image générée
+    show_image(result_image2, title="Image Générée")
+    
+    # Enregistrer l'image générée
+    save_image(result_image2, "generated3.jpg")
