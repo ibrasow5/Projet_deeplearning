@@ -9,13 +9,22 @@ def harmonize_colors_complementary(image_path, output_path):
     # Décalage des teintes de 180° pour l'harmonie complémentaire
     img_hsv[:, :, 0] = (img_hsv[:, :, 0] + 90) % 180  # OpenCV HSV hue range is [0, 179]
 
+    # Ajustement de la saturation (canal S) pour éviter des couleurs trop saturées
+    img_hsv[:, :, 1] = cv2.normalize(img_hsv[:, :, 1], None, alpha=50, beta=200, norm_type=cv2.NORM_MINMAX)
+
+    # Ajustement de la luminosité (canal V) pour des contrastes équilibrés
+    img_hsv[:, :, 2] = cv2.normalize(img_hsv[:, :, 2], None, alpha=70, beta=255, norm_type=cv2.NORM_MINMAX)
+
     # Reconversion en RGB
     img_harmonized = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
 
-    # Sauvegarder l'image harmonisée
-    cv2.imwrite(output_path, img_harmonized)
+    # Mélange de l'image originale et harmonisée (blending)
+    blended_image = cv2.addWeighted(img, 0.6, img_harmonized, 0.4, 0)
 
-    return img_harmonized
+    # Sauvegarder l'image harmonisée mélangée
+    cv2.imwrite(output_path, blended_image)
+
+    return blended_image
 
 # Exemple d'utilisation
 image_path = "test3.jpg"
