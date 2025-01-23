@@ -1,4 +1,5 @@
 import cv2
+from matplotlib import pyplot as plt
 import numpy as np
 
 def harmonize_colors_complementary(image_path, output_path):
@@ -31,10 +32,12 @@ image_path = "test3.jpg"
 output_path = "image_harmonisee.jpg"
 image_harmonisee = harmonize_colors_complementary(image_path, output_path)
 
-# Afficher l'image originale et harmonisée
+# Afficher l'image originale et harmonisée avec OpenCV
 original = cv2.imread(image_path)
 harmonized = cv2.imread(output_path)
 cv2.imshow("Original", original)
 cv2.imshow("Harmonized", harmonized)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+
