@@ -185,6 +185,9 @@ class StyleTransferApp(QWidget):
             QMessageBox.warning(self, "Erreur", "Veuillez charger une image de contenu et une image de style.")
             return
 
+        # Afficher un message indiquant que le traitement est en cours
+        QMessageBox.information(self, "Transfert en Cours", "Le transfert de style est en cours. Cela peut prendre un moment.")
+
         # Utilisation d'un QTimer pour exécuter le transfert dans un thread secondaire
         QTimer.singleShot(0, self.start_style_transfer)
 
@@ -192,11 +195,14 @@ class StyleTransferApp(QWidget):
         try:
             result_tensor = style_transfer(self.content_image_tensor, self.style_image_tensor, epochs=10)
             self.display_result(result_tensor)
+            # Message indiquant que le transfert est terminé
+            QMessageBox.information(self, "Transfert de Style Terminé", "Le transfert de style est terminé.")
         except Exception as e:
             print(f"Erreur lors du transfert de style : {e}")
 
     def display_result(self, result_tensor):
         self.display_image(self.result_frame, result_tensor)
+        print("Transfert de style terminé")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
