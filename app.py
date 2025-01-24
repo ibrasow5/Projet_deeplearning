@@ -54,7 +54,7 @@ class VGGFeatures(nn.Module):
         return content_feature, style_features
 
 # Fonction de transfert de style
-def style_transfer(content_image, style_image, content_weight=1e4, style_weight=1e-2, learning_rate=0.01, epochs=500):
+def style_transfer(content_image, style_image, content_weight=1e-5, style_weight=1e20, learning_rate=0.01, epochs=500):
     model = VGGFeatures().eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
