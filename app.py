@@ -4,6 +4,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QFrame, QMessageBox
 from PIL import Image, ImageEnhance
+import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
@@ -179,11 +180,18 @@ class StyleTransferApp(QWidget):
                 self.display_image(self.style_frame, self.style_image_tensor)
 
     def display_image(self, frame, img_tensor):
-        img_tensor = img_tensor.squeeze(0).cpu().clone()
-        img_tensor = img_tensor.permute(1, 2, 0).numpy()
-        img_tensor = img_tensor * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]
-        img_tensor = (img_tensor * 255).clip(0, 255).astype("uint8")
-        img = Image.fromarray(img_tensor)
+        # Vérifier si l'image est un tensor ou une image PIL
+        if isinstance(img_tensor, torch.Tensor):
+            img_tensor = img_tensor.squeeze(0).cpu().clone() 
+            img_tensor = img_tensor.permute(1, 2, 0).numpy() 
+            img_tensor = img_tensor * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406] 
+            img_tensor = (img_tensor * 255).clip(0, 255).astype("uint8")  
+        elif isinstance(img_tensor, Image.Image):
+            img_tensor = np.array(img_tensor) 
+        else:
+            raise ValueError("Type d'image non pris en charge.")
+        
+        img = Image.fromarray(img_tensor)  
         img = img.convert("RGB")
         img = QImage(img.tobytes(), img.width, img.height, img.width * 3, QImage.Format_RGB888)
         pixmap = QPixmap(img)
@@ -204,10 +212,28 @@ class StyleTransferApp(QWidget):
         try:
             self.result_image_tensor = style_transfer(self.content_image_tensor, self.style_image_tensor, epochs=10)
             self.result_image_tensor = add_texture(self.result_image_tensor, "style2.png")
-            self.display_image(self.result_frame, self.result_image_tensor)
+            # Convertir le tensor en image pour appliquer l'ajustement de luminosité
+            result_image = self.tensor_to_pil(self.result_image_tensor)
+            
+            # Ajuster la luminosité de l'image (ici on multiplie par 1.2 pour l'éclaircir)
+            enhancer = ImageEnhance.Brightness(result_image)
+            result_image = enhancer.enhance(1.2)  # Valeur > 1 pour éclaircir
+            
+            # Afficher l'image ajustée
+            self.display_image(self.result_frame, result_image)
+
             QMessageBox.information(self, "Transfert Terminé", "Le transfert de style est terminé.")
         except Exception as e:
             print(f"Erreur lors du transfert de style : {e}")
+
+    def tensor_to_pil(self, tensor):
+        # Convertir un tensor en image PIL
+        img_tensor = tensor.squeeze(0).cpu().clone()
+        img_tensor = img_tensor.permute(1, 2, 0).numpy()
+        img_tensor = img_tensor * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]
+        img_tensor = (img_tensor * 255).clip(0, 255).astype("uint8")
+        img = Image.fromarray(img_tensor)
+        return img
 
     def save_result_image(self):
         if self.result_image_tensor is None:
