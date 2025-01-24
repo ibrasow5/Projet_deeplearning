@@ -26,7 +26,7 @@ def plot_histograms(original_path, harmonized_path):
         plt.show()  # Afficher les graphiques
 
 # Définir les chemins des images
-image_path = 'test3.jpg'
+image_path = 'im1.jpg'
 output_path = 'image_harmonisee.jpg'
 
 # Évaluer les histogrammes pour l'image originale et harmonisée

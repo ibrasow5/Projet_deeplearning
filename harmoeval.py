@@ -20,12 +20,12 @@ style.configure("TCombobox", font=("Helvetica", 12))
 current_image_index = 0
 responses = []
 images = [
-    {"content": "test3.jpg", "style": "style.png", "generated": "generated1.jpg"},
-    {"content": "t1.jpg", "style": "style.png", "generated": "generated2.jpg"},
-    {"content": "t2.jpg", "style": "style.png", "generated": "generated3.jpg"},
+    {"content": "im1.jpg", "style": "style.png", "generated": "generated1.jpg"},
+    {"content": "im2.jpg", "style": "style.png", "generated": "generated2.jpg"},
+    {"content": "im3.jpg", "style": "style.png", "generated": "generated3.jpg"},
 ]
 
-criteria = ["Fidélité au style", "Respect du contenu", "Esthétique générale", "Originalité"]
+criteria = ["Fidelite au style", "Respect du contenu", "Esthetique générale", "Originalite"]
 ratings = {}
 image_widgets = {}
 
