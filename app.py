@@ -3,7 +3,7 @@ from tkinter import messagebox
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QFileDialog, QFrame, QMessageBox
-from PIL import Image
+from PIL import Image, ImageEnhance
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
@@ -31,6 +31,14 @@ def gram_matrix(tensor):
     G = torch.bmm(features, features.transpose(1, 2))
     return G.div(c * h * w)
 
+def add_texture(image_tensor, texture_path, texture_weight=0.05):
+    texture = Image.open(texture_path).convert("RGB")
+    texture = texture.resize((image_tensor.size(3), image_tensor.size(2)))
+
+    texture_tensor = transforms.ToTensor()(texture).unsqueeze(0)
+    
+    return (image_tensor + texture_tensor * texture_weight).clamp(0, 1)  
+
 # Classe pour extraire les caractéristiques avec VGG19
 class VGGFeatures(nn.Module):
     def __init__(self):
@@ -54,7 +62,7 @@ class VGGFeatures(nn.Module):
         return content_feature, style_features
 
 # Fonction de transfert de style
-def style_transfer(content_image, style_image, content_weight=1e-5, style_weight=1e20, learning_rate=0.01, epochs=500):
+def style_transfer(content_image, style_image, content_weight=1e1, style_weight=1e5, learning_rate=0.01, epochs=500):
     model = VGGFeatures().eval()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
@@ -195,6 +203,7 @@ class StyleTransferApp(QWidget):
     def start_style_transfer(self):
         try:
             self.result_image_tensor = style_transfer(self.content_image_tensor, self.style_image_tensor, epochs=10)
+            self.result_image_tensor = add_texture(self.result_image_tensor, "style.png")
             self.display_image(self.result_frame, self.result_image_tensor)
             QMessageBox.information(self, "Transfert Terminé", "Le transfert de style est terminé.")
         except Exception as e:
