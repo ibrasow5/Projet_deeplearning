@@ -203,7 +203,7 @@ class StyleTransferApp(QWidget):
     def start_style_transfer(self):
         try:
             self.result_image_tensor = style_transfer(self.content_image_tensor, self.style_image_tensor, epochs=10)
-            self.result_image_tensor = add_texture(self.result_image_tensor, "style.png")
+            self.result_image_tensor = add_texture(self.result_image_tensor, "style2.png")
             self.display_image(self.result_frame, self.result_image_tensor)
             QMessageBox.information(self, "Transfert Terminé", "Le transfert de style est terminé.")
         except Exception as e:
