@@ -13,15 +13,16 @@ from torchvision.models import vgg19
 def load_image(image_path, target_size=(256, 256)):
     try:
         img = Image.open(image_path).convert("RGB")
+        original_size = img.size  # Sauvegarder la taille originale
         transform = transforms.Compose([
             transforms.Resize(target_size),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         img_tensor = transform(img).unsqueeze(0)  # Ajouter une dimension batch
-        return img_tensor
+        return img_tensor, original_size
     except Exception as e:
-        return None
+        return None, None
 
 # Fonction pour calculer la matrice de Gram
 def gram_matrix(tensor):
@@ -91,18 +92,19 @@ def style_transfer(content_image, style_image, content_weight=1e4, style_weight=
 class StyleTransferApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Transfert de Style")
-        self.setGeometry(100, 100, 800, 500)  # Fenêtre plus compacte
+        self.setWindowTitle("Application de Transfert de Style")
+        self.setGeometry(100, 130, 800, 500)
 
         self.content_image_tensor = None
         self.style_image_tensor = None
+        self.result_image_tensor = None
+        self.original_content_size = None  # Taille originale de l'image de contenu
 
         self.init_ui()
 
     def init_ui(self):
-        layout = QHBoxLayout()  # Disposition horizontale principale
+        layout = QHBoxLayout()
 
-        # Création des sections pour chaque image et son bouton associé
         content_layout = QVBoxLayout()
         self.content_label = QLabel("Image de Contenu", self)
         self.content_label.setAlignment(Qt.AlignCenter)
@@ -129,11 +131,14 @@ class StyleTransferApp(QWidget):
         self.result_frame = self.create_image_frame("Résultat après transfert")
         apply_btn = QPushButton("Appliquer Transfert de Style", self)
         apply_btn.clicked.connect(self.apply_style_transfer)
+        save_btn = QPushButton("Enregistrer Résultat", self)
+        save_btn.clicked.connect(self.save_result_image)
+        result_layout.setContentsMargins(0, 38, 0, 0)
         result_layout.addWidget(self.result_label)
         result_layout.addWidget(self.result_frame, alignment=Qt.AlignCenter)
         result_layout.addWidget(apply_btn, alignment=Qt.AlignCenter)
+        result_layout.addWidget(save_btn, alignment=Qt.AlignCenter)
 
-        # Ajouter les sections horizontales au layout principal
         layout.addLayout(content_layout)
         layout.addLayout(style_layout)
         layout.addLayout(result_layout)
@@ -154,14 +159,14 @@ class StyleTransferApp(QWidget):
     def load_content_image(self):
         path, _ = QFileDialog.getOpenFileName(self, "Ouvrir Image de Contenu", "", "Images (*.jpg *.jpeg *.png *.gif)")
         if path:
-            self.content_image_tensor = load_image(path)
+            self.content_image_tensor, self.original_content_size = load_image(path)
             if self.content_image_tensor is not None:
                 self.display_image(self.content_frame, self.content_image_tensor)
 
     def load_style_image(self):
         path, _ = QFileDialog.getOpenFileName(self, "Ouvrir Image de Style", "", "Images (*.jpg *.jpeg *.png *.gif)")
         if path:
-            self.style_image_tensor = load_image(path)
+            self.style_image_tensor, _ = load_image(path)
             if self.style_image_tensor is not None:
                 self.display_image(self.style_frame, self.style_image_tensor)
 
@@ -180,29 +185,36 @@ class StyleTransferApp(QWidget):
         frame.layout().addWidget(label, alignment=Qt.AlignCenter)
 
     def apply_style_transfer(self):
-        print("Démarrage du transfert de style")
         if self.content_image_tensor is None or self.style_image_tensor is None:
             QMessageBox.warning(self, "Erreur", "Veuillez charger une image de contenu et une image de style.")
             return
 
-        # Afficher un message indiquant que le traitement est en cours
         QMessageBox.information(self, "Transfert en Cours", "Le transfert de style est en cours. Cela peut prendre un moment.")
-
-        # Utilisation d'un QTimer pour exécuter le transfert dans un thread secondaire
         QTimer.singleShot(0, self.start_style_transfer)
 
     def start_style_transfer(self):
         try:
-            result_tensor = style_transfer(self.content_image_tensor, self.style_image_tensor, epochs=10)
-            self.display_result(result_tensor)
-            # Message indiquant que le transfert est terminé
-            QMessageBox.information(self, "Transfert de Style Terminé", "Le transfert de style est terminé.")
+            self.result_image_tensor = style_transfer(self.content_image_tensor, self.style_image_tensor, epochs=10)
+            self.display_image(self.result_frame, self.result_image_tensor)
+            QMessageBox.information(self, "Transfert Terminé", "Le transfert de style est terminé.")
         except Exception as e:
             print(f"Erreur lors du transfert de style : {e}")
 
-    def display_result(self, result_tensor):
-        self.display_image(self.result_frame, result_tensor)
-        print("Transfert de style terminé")
+    def save_result_image(self):
+        if self.result_image_tensor is None:
+            QMessageBox.warning(self, "Erreur", "Aucun résultat à sauvegarder.")
+            return
+
+        path, _ = QFileDialog.getSaveFileName(self, "Enregistrer Image", "", "Images (*.png *.jpg *.jpeg)")
+        if path:
+            img_tensor = self.result_image_tensor.squeeze(0).cpu().clone()
+            img_tensor = img_tensor.permute(1, 2, 0).numpy()
+            img_tensor = img_tensor * [0.229, 0.224, 0.225] + [0.485, 0.456, 0.406]
+            img_tensor = (img_tensor * 255).clip(0, 255).astype("uint8")
+            img = Image.fromarray(img_tensor)
+            img = img.resize(self.original_content_size)  # Redimensionner à la taille d'origine
+            img.save(path)
+            QMessageBox.information(self, "Sauvegarde", f"Image sauvegardée sous : {path}")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
